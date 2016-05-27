@@ -18,15 +18,15 @@ def splitAudioFile(filename_mp3, min_silence_len=400, silence_thresh=-65):
         if i==0:
             start = 0.0
             end = (chunk[1] + nonsilence_range[i+1][0])/2
-            sound[:end].export("./tmp/chunk{0}.wav".format(i), format="wav")
+            sound[:end].export("./tmp/{0}.wav".format(i), format="wav")
         elif i == len(nonsilence_range)-1:
             start = (nonsilence_range[i-1][1] + chunk[0])/2
             end = chunk[1] + 1000.0
-            sound[start:].export("./tmp/chunk{0}.wav".format(i), format="wav")
+            sound[start:].export("./tmp/{0}.wav".format(i), format="wav")
         else:
             start = (nonsilence_range[i-1][1] + chunk[0])/2
             end = (chunk[1] + nonsilence_range[i+1][0])/2
-            sound[start:end].export("./tmp/chunk{0}.wav".format(i), format="wav")
+            sound[start:end].export("./tmp/{0}.wav".format(i), format="wav")
 
         start = round(start/1000, 1)
         end = round(end/1000, 1)
@@ -35,5 +35,5 @@ def splitAudioFile(filename_mp3, min_silence_len=400, silence_thresh=-65):
     return chunks_range
 
 
-chunks_range = splitAudioFile(filename_mp3)
-writeLabelTracks_file(filename_aup, chunks_range)
+#chunks_range = splitAudioFile(filename_mp3)
+#writeLabelTracks_file(filename_aup, chunks_range)

@@ -9,6 +9,8 @@ import threading
 import os
 import shutil
 from pydub import AudioSegment
+from test2 import splitAudioFile
+from test1 import writeLabelTracks_file
 import speech_recognition as sr
 
 
@@ -37,13 +39,13 @@ def readKeys(filename):
 
 API_Google_KEY, IBM_USERNAME, IBM_PASSWORD, WIT_AI_KEY, BING_KEY, API_AI_CLIENT_ACCESS_TOKEN = readKeys('k.txt')
 
-def requestTranscribe(filename, method = 'google'):
-    #AUDIO_FILE = path.join(path.dirname(path.realpath(__file__)), "english.wav")
+def requestTranscribe(filename, service ='google'):
+
     r = sr.Recognizer()
     with sr.AudioFile(filename) as source:
         audio = r.record(source)
     text =''
-    if method == 'google':
+    if service == 'google':
         try:
             # for testing purposes, we're just using the default API key
             # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
@@ -55,7 +57,7 @@ def requestTranscribe(filename, method = 'google'):
         except sr.RequestError as e:
             print("Could not request results from Google Speech Recognition service; {0}".format(e))
 
-    if method == 'sphinx':
+    if service == 'sphinx':
         # recognize speech using Sphinx
         try:
             text = r.recognize_sphinx(audio)
@@ -65,7 +67,7 @@ def requestTranscribe(filename, method = 'google'):
         except sr.RequestError as e:
             print("Sphinx error; {0}".format(e))
 
-    if method == 'wit':
+    if service == 'wit':
         # recognize speech using Wit.ai
         try:
             text = r.recognize_wit(audio, key=WIT_AI_KEY)
@@ -75,7 +77,7 @@ def requestTranscribe(filename, method = 'google'):
         except sr.RequestError as e:
             print("Could not request results from Wit.ai service; {0}".format(e))
 
-    if method == 'ibm':
+    if service == 'ibm':
         # recognize speech using IBM Speech to Text
         try:
             text = r.recognize_ibm(audio, username=IBM_USERNAME, password=IBM_PASSWORD)
@@ -85,7 +87,7 @@ def requestTranscribe(filename, method = 'google'):
         except sr.RequestError as e:
             print("Could not request results from IBM Speech to Text service; {0}".format(e))
 
-    if method == 'bing':
+    if service == 'bing':
         # recognize speech using Microsoft Bing Voice Recognition
         try:
             text = r.recognize_bing(audio, key=BING_KEY)
@@ -95,7 +97,7 @@ def requestTranscribe(filename, method = 'google'):
         except sr.RequestError as e:
             print("Could not request results from Microsoft Bing Voice Recognition service; {0}".format(e))
 
-    if method == 'ai':
+    if service == 'ai':
         # recognize speech using api.ai
         try:
             text = r.recognize_api(audio, client_access_token=API_AI_CLIENT_ACCESS_TOKEN)
@@ -108,13 +110,13 @@ def requestTranscribe(filename, method = 'google'):
     return text
 
 
-class SendToGoogle():
+class SendToGoogle_onAupFile():
     sentences_from_google   = []
     load_counter            = 0
     number_of_sentence      = 0
 
 
-    def send(self, labeltracks, filename_mp3, method):
+    def send(self, labeltracks, filename_mp3, service):
         """
         Нарезаем аудиофайл на куски
         На выходе на каждую аудиофразу получаем .txt файл с текстом данной фразы распознанной гуглом 
@@ -146,7 +148,7 @@ class SendToGoogle():
                 if end + (self.number_of_sentence % flow_number) >= self.number_of_sentence:
                     end = self.number_of_sentence
 
-                thread = threading.Thread(target=self.send_in_flow, args=(start, end, values, filename_mp3, in_dir, method))
+                thread = threading.Thread(target=self.send_in_flow, args=(start, end, values, filename_mp3, in_dir, service))
                 thread.daemon = True
                 thread.start()
 
@@ -160,7 +162,7 @@ class SendToGoogle():
         return self.sentences_from_google
 
 
-    def send_in_flow(self, start, end, values, filename_mp3, in_dir, method):
+    def send_in_flow(self, start, end, values, filename_mp3, in_dir, service):
         sound = AudioSegment.from_mp3(filename_mp3)
         for i in range(start, end):
             t, t1, title = values[i]
@@ -170,7 +172,7 @@ class SendToGoogle():
             s = sound[t:t1]
             s.export(".\\tmp\%d\%s.flac" % (in_dir, i), format="flac", bitrate="16k")
 
-            text_from_google = requestTranscribe(".\\tmp\%d\%s.flac" % (in_dir, i), method)
+            text_from_google = requestTranscribe(".\\tmp\%d\%s.flac" % (in_dir, i), service)
 
             if text_from_google != None:
                 self.sentences_from_google[i] = text_from_google
@@ -180,4 +182,63 @@ class SendToGoogle():
                 #os.remove(".\\tmp\%d\%s.flac" % (in_dir, i))
             #except:
                 #print("File is busy now")
+            self.load_counter += 1
+
+class SendToGoogle():
+    sentences_from_google   = []
+    load_counter            = 0
+    number_of_sentence      = 0
+
+    def send(self, filename_mp3, filename_aup, service):
+        """
+        Нарезаем аудиофайл на куски
+        На выходе на каждую аудиофразу получаем .txt файл с текстом данной фразы распознанной гуглом
+        """
+        # создадим папку для распознанных файлов
+        if not os.path.exists('tmp'):
+            os.makedirs('tmp')
+        chunks_range = splitAudioFile(filename_mp3)
+        writeLabelTracks_file(filename_aup, chunks_range)
+        for i, val in enumerate(chunks_range):
+            self.number_of_sentence = len(chunks_range)
+
+            for i in range(self.number_of_sentence):
+                self.sentences_from_google.append("")
+
+            flow_number = 4
+            sentence_per_flow = int(self.number_of_sentence / flow_number)
+
+            for i in range(flow_number):
+                start = sentence_per_flow * i
+                end = sentence_per_flow * (i + 1)
+
+                if end + (self.number_of_sentence % flow_number) >= self.number_of_sentence:
+                    end = self.number_of_sentence
+
+                thread = threading.Thread(target=self.send_in_flow, args=(start, end, chunks_range, filename_mp3, service))
+                thread.daemon = True
+                thread.start()
+
+        while self.load_counter < self.number_of_sentence:
+            pass
+        try:
+            shutil.rmtree(".\\tmp")
+        except:
+            print("PermissionError: [WinError 5] Отказано в доступе: '.\\tmp'")
+
+        return self.sentences_from_google
+
+
+    def send_in_flow(self, start, end, values, filename_mp3, service):
+        for i in range(start, end):
+            t, t1 = values[i]
+            # пропускаем через распознавание речи и получаем список распознаных фраз
+
+            text_from_google = requestTranscribe(".\\tmp\%s.wav" % i, service)
+
+            if text_from_google != None:
+                self.sentences_from_google[i] = text_from_google
+
+            print(str(self.load_counter + 1) + "/" + str(self.number_of_sentence) + "   " + str(i + 1) + "/" + str(end) + " " + self.sentences_from_google[i])
+
             self.load_counter += 1
