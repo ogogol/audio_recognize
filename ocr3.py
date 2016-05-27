@@ -8,7 +8,7 @@ import shutil
 
 __author__ = 'tarasov'
 ##############################
-filename_suff = "text/NYStories4"
+filename_suff = "text/02_Frederick_Taylor_2"
 recognition_service = 'sphinx'#'google' or 'sphinx' or 'wit' or 'ibm'
 
 filename = "%s.aup" % filename_suff
@@ -51,11 +51,18 @@ def changefloat():
     fileaup.close()
     pattern = re.compile('<label t="(?P<t>.*?)" t1="(?P<t1>.*?)"')
     values = pattern.findall(record)
-    for t, t1 in values:
+    for i, t, t1 in enumerate(values):
+        if i == 0:
+            t = float(t)
+            t1 = ((float(t1) + float(values[i+1][0]))/2)
+        elif i == len(values)-1:
+            t = ((float(values[i-1][1]) + float(t))/2)
+            t1 = float(t1) + 1.0
+        else:
+            t = ((float(values[i-1][1]) + float(t))/2)
+            t1 = ((float(t1) + float(values[i+1][0]))/2)
         record = re.sub('t="%s" t1="%s"' % (t, t1), 't="%.1f" t1="%.1f"' % (float(t), float(t1)), record)
     record = re.sub('\t', '    ', record)
-    # замена пробелов на пробел
-    #    record = re.sub(r'\b[,\']* {2,}[,\']*\b', ' ', record)
     fileaup = open(filename, 'w')
     fileaup.write(record)
     fileaup.close()
@@ -77,12 +84,10 @@ if __name__ == '__main__':
     except(IOError):
         print ("Файл с распознанными предложениями отсутствует, запускаю распознавание.")
         if labeltracks == []:
-            print('Labeltracks нет, Будем делать')
             send_to_google = SendToGoogle()
-            sentences_from_google = send_to_google.send(filename_mp3, filename, in_dir, recognition_service)
+            sentences_from_google = send_to_google.send(filename_mp3, filename, in_dir, 200, -60, recognition_service)
             labeltracks = get_labeltracks()
         else:
-            print('Labeltracks есть, работаем по нему')
             send_to_google = SendToGoogle_onAupFile()
             sentences_from_google = send_to_google.send(labeltracks, filename_mp3, in_dir, recognition_service)
         print ("Распознование гуглом завершено.")
@@ -94,7 +99,6 @@ if __name__ == '__main__':
         sentenses = sentenses[:-2]
         file_google.write(sentenses)
         file_google.close()
-
         
     print ("Полученные предложения:")
     print (sentences_from_google)

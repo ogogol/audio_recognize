@@ -1,12 +1,12 @@
-#-*- coding: utf8 -*-
+
 import re
 
 
-def comment_aup(filename='text/137.aup'):
+def comment_aup(filename='text/02_Frederick_Taylor_2.aup'):
     """
     функция убирает пустые места в комментах
     """
-    fileaup = open(filename, 'rb')
+    fileaup = open(filename, 'r')
     record = fileaup.read()
     pattern = re.compile('<label t="(?P<t>.*?)" t1="(?P<t1>.*?)" title="(?P<title>.*?)"')
     values = pattern.findall(record)
@@ -29,7 +29,7 @@ def comment_aup(filename='text/137.aup'):
         # Замена новых значений t и t1
         record = re.sub('t="%s" t1="%s"' % (tt, t1t1), 't="%.4f" t1="%.4f"' % (t, t1), record)
     fileaup.close()
-    fileaup = open(filename, 'wb')
+    fileaup = open(filename, 'w')
     fileaup.write(record)
     fileaup.close()
 

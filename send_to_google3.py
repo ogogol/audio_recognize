@@ -47,7 +47,7 @@ def requestTranscribe(filename, service ='google'):
             # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
             # instead of `r.recognize_google(audio)`
             text = r.recognize_google(audio, key=API_Google_KEY)
-            print("Google Speech Recognition thinks you said - %s" % text)
+            #print("Google Speech Recognition thinks you said - %s" % text)
         except sr.UnknownValueError:
             print("Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
@@ -57,7 +57,7 @@ def requestTranscribe(filename, service ='google'):
         # recognize speech using Sphinx
         try:
             text = r.recognize_sphinx(audio)
-            print("Sphinx thinks you said - %s" % text)
+            #print("Sphinx thinks you said - %s" % text)
         except sr.UnknownValueError:
             print("Sphinx could not understand audio")
         except sr.RequestError as e:
@@ -67,7 +67,7 @@ def requestTranscribe(filename, service ='google'):
         # recognize speech using Wit.ai
         try:
             text = r.recognize_wit(audio, key=WIT_AI_KEY)
-            print("Wit.ai thinks you said - %s" % text)
+            #print("Wit.ai thinks you said - %s" % text)
         except sr.UnknownValueError:
             print("Wit.ai could not understand audio")
         except sr.RequestError as e:
@@ -77,7 +77,7 @@ def requestTranscribe(filename, service ='google'):
         # recognize speech using IBM Speech to Text
         try:
             text = r.recognize_ibm(audio, username=IBM_USERNAME, password=IBM_PASSWORD)
-            print("IBM Speech to Text thinks you said - %s" % text)
+            #print("IBM Speech to Text thinks you said - %s" % text)
         except sr.UnknownValueError:
             print("IBM Speech to Text could not understand audio")
         except sr.RequestError as e:
@@ -87,7 +87,7 @@ def requestTranscribe(filename, service ='google'):
         # recognize speech using Microsoft Bing Voice Recognition
         try:
             text = r.recognize_bing(audio, key=BING_KEY)
-            print("Microsoft Bing Voice Recognition thinks you said - %s" % text)
+            #print("Microsoft Bing Voice Recognition thinks you said - %s" % text)
         except sr.UnknownValueError:
             print("Microsoft Bing Voice Recognition could not understand audio")
         except sr.RequestError as e:
@@ -97,7 +97,7 @@ def requestTranscribe(filename, service ='google'):
         # recognize speech using api.ai
         try:
             text = r.recognize_api(audio, client_access_token=API_AI_CLIENT_ACCESS_TOKEN)
-            print("api.ai thinks you said - %s" % text)
+            #print("api.ai thinks you said - %s" % text)
         except sr.UnknownValueError:
             print("api.ai could not understand audio")
         except sr.RequestError as e:
@@ -161,10 +161,10 @@ class SendToGoogle_onAupFile():
         for i in range(start, end):
             # пропускаем через распознавание речи и получаем список распознаных фраз
             if not os.path.os.path.isfile(".\\tmp\\%d\\%d.wav" % (in_dir, i)):
-                print("%d.wav file doesn't  exist" % i)
                 t, t1, title = values[i]
                 t = float(t)*1000
                 t1 = float(t1)*1000
+
                 s = sound[t:t1]
                 s.export(".\\tmp\\%d\\%d.wav" % (in_dir, i), format="wav", bitrate="16k")#, format="flac", bitrate="16k") in_dir,
 
@@ -182,7 +182,7 @@ class SendToGoogle():
     load_counter            = 0
     number_of_sentence      = 0
 
-    def send(self, filename_mp3, filename_aup, in_dir, service):
+    def send(self, filename_mp3, filename_aup, in_dir, min_silence_len, silence_thresh, service):
         """
         Нарезаем аудиофайл на куски
         На выходе на каждую аудиофразу получаем .txt файл с текстом данной фразы распознанной гуглом
@@ -194,7 +194,7 @@ class SendToGoogle():
         os.makedirs('.\\tmp\\%d' % in_dir)
 
         print('Нарезки файлов нет, готовим')
-        chunks_range = splitAudioFile(filename_mp3, in_dir)
+        chunks_range = splitAudioFile(filename_mp3, in_dir, min_silence_len, silence_thresh)
         writeLabelTracks_file(filename_aup, chunks_range)
 
         self.number_of_sentence = len(chunks_range)
