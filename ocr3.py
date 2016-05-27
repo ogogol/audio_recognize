@@ -1,15 +1,9 @@
-import subprocess
-import threading
-import time
+#import time
 from text_to_elements3 import tokenize_text
-import codecs
-from text_utils3 import percent_diff, clean_text, coalitions, clean_collocation
 from recognize3 import recognize
 from send_to_google3 import SendToGoogle, SendToGoogle_onAupFile
 import re
 import shutil
-from multiprocessing import Pool
-import multiprocessing as mp
 
 
 __author__ = 'tarasov'
@@ -30,7 +24,7 @@ TXT_FILENAME = "%s.txt" % filename_suff
 print ("COPY \%s \%s" % (filename, output_filename))
 #копируем исходны файл с именем аутпут файл, в него потом положим результат
 shutil.copyfile(".\%s" % filename, ".\%s" % output_filename)
-#subprocess.call(["COPY", "\%s \%s" % (filename, output_filename)], shell=True)
+
 
 
 initial_text = tokenize_text(TXT_FILENAME)
@@ -70,51 +64,37 @@ def changefloat():
 
 if __name__ == '__main__':
     labeltracks = get_labeltracks()
-    if labeltracks == []:
-        print('Labeltracks нет, Будем делать')
-        try:
-            file_google = open(google_log_file_name, 'r')
-            print ("Файл с распознанными предложениями присутствует, считываю из него данные.")
-            text_from_google = file_google.read()
-            file_google.close()
+    in_dir = 1
 
-            sentences_from_google = text_from_google.split('\n\n')
+    try:
+        file_google = open(google_log_file_name, 'r')
+        print ("Файл с распознанными предложениями присутствует, считываю из него данные.")
+        text_from_google = file_google.read()
+        file_google.close()
 
-        except(IOError):
-            print ("Файл с распознанными предложениями отсутствует, запускаю распознавание.")
+        sentences_from_google = text_from_google.split('\n\n')
+
+    except(IOError):
+        print ("Файл с распознанными предложениями отсутствует, запускаю распознавание.")
+        if labeltracks == []:
+            print('Labeltracks нет, Будем делать')
             send_to_google = SendToGoogle()
-            sentences_from_google = send_to_google.send(filename_mp3, filename, recognition_service)
-            print ("Распознование гуглом завершено.")
-
-    else:
-        print('Labeltracks есть, основываемся на них')
-        changefloat()
-        try:
-            file_google = open(google_log_file_name, 'r')
-            print ("Файл с распознанными предложениями присутствует, считываю из него данные.")
-            text_from_google = file_google.read()
-            file_google.close()
-
-            sentences_from_google = text_from_google.split('\n\n')
-
-        except(IOError):
-            print ("Файл с распознанными предложениями отсутствует, запускаю распознавание.")
+            sentences_from_google = send_to_google.send(filename_mp3, filename, in_dir, recognition_service)
+            labeltracks = get_labeltracks()
+        else:
+            print('Labeltracks есть, работаем по нему')
             send_to_google = SendToGoogle_onAupFile()
-            sentences_from_google = send_to_google.send(labeltracks, filename_mp3, recognition_service)
-            print ("Распознование гуглом завершено.")
+            sentences_from_google = send_to_google.send(labeltracks, filename_mp3, in_dir, recognition_service)
+        print ("Распознование гуглом завершено.")
 
-    file_google = open(google_log_file_name, 'w')
+        file_google = open(google_log_file_name, 'w')
+        sentenses = ""
+        for i, sentence in enumerate(sentences_from_google):
+            sentenses += sentence + "\r\n"
+        sentenses = sentenses[:-2]
+        file_google.write(sentenses)
+        file_google.close()
 
-    sentenses = ""
-    for i, sentence in enumerate(sentences_from_google):
-        sentenses += sentence + "\r\n"
-    sentenses = sentenses[:-2]
-    file_google.write(sentenses)
-    file_google.close()
-
-    fileaup = open(google_log_file_name, 'w')
-    fileaup.write(sentenses)
-    fileaup.close()
         
     print ("Полученные предложения:")
     print (sentences_from_google)
